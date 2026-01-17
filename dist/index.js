@@ -6,14 +6,64 @@ import oauthRoutes from './oauthRoutes.js';
 import fulfillmentRoutes from './fulfillmentRoutes.js';
 import taskRoutes from './taskRoutes.js';
 import { ADMIN_CONFIG } from './config.js';
+import { getUserFromToken } from './auth.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Home route - HTML
-app.get('/', (req, res) => {
+// Authentication middleware
+function requireAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+    const token = req.query.token || (authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null);
+    if (!token) {
+        return res.status(401).type('html').send(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8"/>
+          <title>Login Required</title>
+          <style>
+            body { font-family: system-ui; max-width: 400px; margin: 100px auto; padding: 20px; text-align: center; }
+            button { padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+            button:hover { background: #0052a3; }
+          </style>
+        </head>
+        <body>
+          <h1>🔒 Authentication Required</h1>
+          <p>Please sign in to access this page</p>
+          <button onclick="window.location.href='/api/auth/signin-page'">Sign In</button>
+        </body>
+      </html>
+    `);
+    }
+    const user = getUserFromToken(token);
+    if (!user) {
+        return res.status(401).type('html').send(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8"/>
+          <title>Invalid Token</title>
+          <style>
+            body { font-family: system-ui; max-width: 400px; margin: 100px auto; padding: 20px; text-align: center; }
+            button { padding: 10px 20px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+            button:hover { background: #0052a3; }
+          </style>
+        </head>
+        <body>
+          <h1>❌ Invalid or Expired Token</h1>
+          <p>Your session has expired. Please sign in again.</p>
+          <button onclick="window.location.href='/api/auth/signin-page'">Sign In</button>
+        </body>
+      </html>
+    `);
+    }
+    next();
+}
+// Home route - HTML (protected)
+app.get('/', requireAuth, (req, res) => {
     res.type('html').send(`
     <!doctype html>
     <html>

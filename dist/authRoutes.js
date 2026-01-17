@@ -21,6 +21,75 @@ async function initializeAdminUser() {
 // Initialize on module load
 initializeAdminUser();
 /**
+ * GET /api/auth/signin-page
+ * Show signin page
+ */
+router.get('/signin-page', (req, res) => {
+    res.type('html').send(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>Admin Sign In</title>
+        <style>
+          body { font-family: system-ui; max-width: 400px; margin: 100px auto; padding: 20px; }
+          h1 { text-align: center; }
+          .form-group { margin-bottom: 15px; }
+          label { display: block; margin-bottom: 5px; font-weight: bold; }
+          input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+          button { width: 100%; padding: 10px; background: #0066cc; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+          button:hover { background: #0052a3; }
+          .error { color: red; margin-top: 10px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <h1>🔐 Admin Sign In</h1>
+        <form id="signinForm">
+          <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <button type="submit">Sign In</button>
+          <div id="error" class="error"></div>
+        </form>
+
+        <script>
+          document.getElementById('signinForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            const email = document.getElementById('email').value
+            const password = document.getElementById('password').value
+            const errorDiv = document.getElementById('error')
+            
+            try {
+              const res = await fetch('/api/auth/signin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+              })
+              
+              const data = await res.json()
+              
+              if (!res.ok) {
+                errorDiv.textContent = data.error || 'Sign in failed'
+                return
+              }
+              
+              // Redirect to home with token
+              window.location.href = '/?token=' + data.token
+            } catch (error) {
+              errorDiv.textContent = 'An error occurred. Please try again.'
+            }
+          })
+        </script>
+      </body>
+    </html>
+  `);
+});
+/**
  * POST /api/auth/signup
  * Disabled - single admin user only
  */
