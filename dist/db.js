@@ -1,5 +1,8 @@
-import { put, del } from '@vercel/blob';
-// Vercel Blob storage helpers
+import { put, del, list } from '@vercel/blob';
+// In-memory cache with Blob persistence
+// This gives us fast access while maintaining persistence
+const cache = new Map();
+// Vercel Blob storage helpers with in-memory cache
 const BLOB_PREFIX = {
     USER: 'user/',
     USER_BY_EMAIL: 'user-email/',
@@ -8,24 +11,71 @@ const BLOB_PREFIX = {
     OAUTH_TOKEN_BY_REFRESH: 'oauth-refresh/',
     AUTH_CODE: 'auth-code/'
 };
+// Helper to get blob URL from cache or list
+async function getBlobUrl(path) {
+    const cacheKey = `url:${path}`;
+    if (cache.has(cacheKey)) {
+        return cache.get(cacheKey);
+    }
+    try {
+        const { blobs } = await list({ prefix: path });
+        if (blobs.length > 0) {
+            cache.set(cacheKey, blobs[0].url);
+            return blobs[0].url;
+        }
+    }
+    catch (error) {
+        console.error('Error listing blobs:', error);
+    }
+    return null;
+}
 // Helper function to get data from blob
 async function getFromBlob(path) {
+    // Check memory cache first
+    if (cache.has(path)) {
+        return cache.get(path);
+    }
     try {
-        const response = await fetch(`https://blob.vercel-storage.com/${path}`);
+        const blobUrl = await getBlobUrl(path);
+        if (!blobUrl)
+            return null;
+        const response = await fetch(blobUrl);
         if (!response.ok)
             return null;
         const data = await response.json();
+        cache.set(path, data);
         return data;
     }
     catch (error) {
+        console.error('Error reading from blob:', error);
         return null;
     }
 }
 // Helper function to store data in blob
 async function putToBlob(path, data) {
-    const jsonString = JSON.stringify(data);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    await put(path, blob, { access: 'public' });
+    try {
+        const jsonString = JSON.stringify(data);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const result = await put(path, blob, { access: 'public' });
+        // Update caches
+        cache.set(path, data);
+        cache.set(`url:${path}`, result.url);
+    }
+    catch (error) {
+        console.error('Error writing to blob:', error);
+        throw error;
+    }
+}
+// Helper to delete from blob
+async function deleteFromBlob(path) {
+    try {
+        await del(path);
+        cache.delete(path);
+        cache.delete(`url:${path}`);
+    }
+    catch (error) {
+        console.error('Error deleting from blob:', error);
+    }
 }
 // Users
 export const users = {
@@ -40,7 +90,7 @@ export const users = {
         await putToBlob(`${BLOB_PREFIX.USER}${id}.json`, user);
     },
     async delete(id) {
-        await del(`${BLOB_PREFIX.USER}${id}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.USER}${id}.json`);
     }
 };
 export const usersByEmail = {
@@ -55,7 +105,7 @@ export const usersByEmail = {
         await putToBlob(`${BLOB_PREFIX.USER_BY_EMAIL}${email}.json`, user);
     },
     async delete(email) {
-        await del(`${BLOB_PREFIX.USER_BY_EMAIL}${email}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.USER_BY_EMAIL}${email}.json`);
     }
 };
 // OAuth Clients
@@ -67,7 +117,7 @@ export const oauth2Clients = {
         await putToBlob(`${BLOB_PREFIX.OAUTH_CLIENT}${clientId}.json`, client);
     },
     async delete(clientId) {
-        await del(`${BLOB_PREFIX.OAUTH_CLIENT}${clientId}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.OAUTH_CLIENT}${clientId}.json`);
     }
 };
 // OAuth Tokens
@@ -84,7 +134,7 @@ export const oauth2Tokens = {
         await putToBlob(`${BLOB_PREFIX.OAUTH_TOKEN}${accessToken}.json`, token);
     },
     async delete(accessToken) {
-        await del(`${BLOB_PREFIX.OAUTH_TOKEN}${accessToken}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.OAUTH_TOKEN}${accessToken}.json`);
     }
 };
 export const oauth2TokensByRefresh = {
@@ -100,7 +150,7 @@ export const oauth2TokensByRefresh = {
         await putToBlob(`${BLOB_PREFIX.OAUTH_TOKEN_BY_REFRESH}${refreshToken}.json`, token);
     },
     async delete(refreshToken) {
-        await del(`${BLOB_PREFIX.OAUTH_TOKEN_BY_REFRESH}${refreshToken}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.OAUTH_TOKEN_BY_REFRESH}${refreshToken}.json`);
     }
 };
 // Authorization Codes
@@ -117,19 +167,30 @@ export const authorizationCodes = {
         await putToBlob(`${BLOB_PREFIX.AUTH_CODE}${code}.json`, authCode);
     },
     async delete(code) {
-        await del(`${BLOB_PREFIX.AUTH_CODE}${code}.json`);
+        await deleteFromBlob(`${BLOB_PREFIX.AUTH_CODE}${code}.json`);
     }
 };
 // Initialize with a sample OAuth2 client for Google Home
 async function initializeDefaultClient() {
-    const existingClient = await oauth2Clients.get('google-home-client');
-    if (!existingClient) {
-        await oauth2Clients.set('google-home-client', {
-            clientId: 'google-home-client',
-            clientSecret: 'your-client-secret-change-this', // Change this in production!
-            redirectUris: ['https://oauth-redirect.googleusercontent.com/r/acremote-0b610']
-        });
-        console.log('✅ Initialized default OAuth2 client');
+    try {
+        console.log('🔍 Checking for default OAuth2 client...');
+        const existingClient = await oauth2Clients.get('google-home-client');
+        if (!existingClient) {
+            console.log('📝 Creating default OAuth2 client...');
+            await oauth2Clients.set('google-home-client', {
+                clientId: 'google-home-client',
+                clientSecret: 'your-client-secret-change-this', // Change this in production!
+                redirectUris: ['https://oauth-redirect.googleusercontent.com/r/acremote-0b610']
+            });
+            console.log('✅ Initialized default OAuth2 client');
+        }
+        else {
+            console.log('✅ Default OAuth2 client already exists');
+        }
+    }
+    catch (error) {
+        console.error('❌ Failed to initialize default OAuth2 client:', error);
+        console.error('Make sure BLOB_READ_WRITE_TOKEN environment variable is set');
     }
 }
 // Call initialization
