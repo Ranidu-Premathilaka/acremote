@@ -18,7 +18,7 @@ export const AC_DEVICE = {
         'action.devices.traits.Toggles'
     ],
     attributes: {
-        availableThermostatModes: ['off', 'fan-only', 'cool', 'dry'],
+        availableThermostatModes: ['fan-only', 'cool', 'dry'],
         thermostatTemperatureUnit: 'C',
         thermostatTemperatureRange: {
             minThresholdCelsius: 18,

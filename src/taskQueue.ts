@@ -17,7 +17,6 @@ export interface ACState {
   on: boolean
   thermostatMode: string
   thermostatTemperatureSetpoint: number
-  thermostatTemperatureAmbient: number
   currentFanSpeedSetting: string
   currentToggleSettings: {
     swing: boolean
@@ -29,7 +28,6 @@ export let currentACState: ACState = {
   on: false,
   thermostatMode: 'cool',
   thermostatTemperatureSetpoint: 22,
-  thermostatTemperatureAmbient: 25,
   currentFanSpeedSetting: 'medium_key',
   currentToggleSettings: {
     swing: false
