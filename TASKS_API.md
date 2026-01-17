@@ -3,6 +3,7 @@
 This document explains how AC commands from Google Home are formatted when you retrieve them from the task queue.
 
 ## Retrieving Tasks
+revert
 
 **Endpoint:** `GET /tasks`
 
