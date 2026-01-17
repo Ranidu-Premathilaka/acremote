@@ -17,6 +17,38 @@ const app = express()
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Request/Response logging
+app.use((req, res, next) => {
+  const start = Date.now()
+  console.log(`\n📥 [${new Date().toISOString()}] ${req.method} ${req.path}`)
+  console.log('Headers:', JSON.stringify(req.headers, null, 2))
+  if (Object.keys(req.query).length > 0) {
+    console.log('Query:', JSON.stringify(req.query, null, 2))
+  }
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', JSON.stringify(req.body, null, 2))
+  }
+  
+  const originalSend = res.send
+  const originalJson = res.json
+  
+  res.send = function(body: any) {
+    const duration = Date.now() - start
+    console.log(`📤 [${new Date().toISOString()}] Response ${res.statusCode} (${duration}ms)`)
+    console.log('Response Body:', typeof body === 'string' ? body.substring(0, 500) : body)
+    return originalSend.call(this, body)
+  }
+  
+  res.json = function(body: any) {
+    const duration = Date.now() - start
+    console.log(`📤 [${new Date().toISOString()}] Response ${res.statusCode} (${duration}ms)`)
+    console.log('Response JSON:', JSON.stringify(body, null, 2))
+    return originalJson.call(this, body)
+  }
+  
+  next()
+})
+
 // Authentication middleware
 function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const authHeader = req.headers.authorization

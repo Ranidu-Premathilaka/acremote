@@ -95,8 +95,7 @@ router.get('/signin-page', (req, res) => {
  */
 router.post('/signup', async (req, res) => {
     res.status(403).json({
-        error: 'Signup is disabled. This system supports a single admin user only.',
-        adminEmail: ADMIN_CONFIG.email
+        error: 'Signup is disabled. This system supports a single admin user only.'
     });
 });
 /**

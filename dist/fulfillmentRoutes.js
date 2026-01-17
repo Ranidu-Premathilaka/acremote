@@ -34,11 +34,15 @@ function verifyAccessToken(req, res, next) {
 router.post('/', verifyAccessToken, async (req, res) => {
     try {
         const { requestId, inputs } = req.body;
+        console.log('\n🏠 Google Home Fulfillment Request:');
+        console.log('Request ID:', requestId);
+        console.log('Full Request:', JSON.stringify(req.body, null, 2));
         if (!requestId || !inputs || !Array.isArray(inputs)) {
             return res.status(400).json({ error: 'Invalid request format' });
         }
         const input = inputs[0];
         const intent = input.intent;
+        console.log('Intent:', intent);
         switch (intent) {
             case 'action.devices.SYNC':
                 return handleSync(req, res, requestId);
@@ -158,6 +162,7 @@ function handleExecute(req, res, requestId, input) {
                 };
                 taskQueue.push(task);
                 // Update state based on command
+                console.log('Processing command:', cmdName, 'with params:', params);
                 try {
                     switch (cmdName) {
                         case 'action.devices.commands.OnOff':
@@ -195,6 +200,7 @@ function handleExecute(req, res, requestId, input) {
             if (success) {
                 // Update the state
                 updateACState(newState);
+                console.log('✅ State updated successfully:', JSON.stringify(newState, null, 2));
                 commandResults.push({
                     ids: [device.id],
                     status: 'SUCCESS',
