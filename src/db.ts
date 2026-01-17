@@ -35,6 +35,7 @@ export const users: Map<string, User> = new Map()
 export const usersByEmail: Map<string, User> = new Map()
 export const oauth2Clients: Map<string, OAuth2Client> = new Map()
 export const oauth2Tokens: Map<string, OAuth2Token> = new Map()
+export const oauth2TokensByRefresh: Map<string, OAuth2Token> = new Map()
 export const authorizationCodes: Map<string, AuthorizationCode> = new Map()
 
 // Initialize with a sample OAuth2 client for Google Home

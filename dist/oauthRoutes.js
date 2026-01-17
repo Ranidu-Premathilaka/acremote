@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getUserFromToken } from './auth.js';
-import { oauth2Clients, oauth2Tokens, authorizationCodes } from './db.js';
+import { oauth2Clients, oauth2Tokens, oauth2TokensByRefresh, authorizationCodes } from './db.js';
 const router = Router();
 /**
  * GET /oauth/authorize
@@ -271,6 +271,7 @@ router.post('/token', (req, res) => {
                 createdAt: new Date()
             };
             oauth2Tokens.set(accessToken, token);
+            oauth2TokensByRefresh.set(refreshToken, token);
             res.json({
                 access_token: accessToken,
                 refresh_token: refreshToken,
@@ -294,22 +295,25 @@ router.post('/token', (req, res) => {
                     error_description: 'Invalid client credentials'
                 });
             }
-            // Find token by refresh token
-            let existingToken;
-            for (const token of oauth2Tokens.values()) {
-                if (token.refreshToken === refresh_token && token.clientId === client_id) {
-                    existingToken = token;
-                    break;
-                }
-            }
+            const existingToken = oauth2TokensByRefresh.get(refresh_token);
             if (!existingToken) {
+                console.error('Refresh token not found:', refresh_token);
                 return res.status(400).json({
                     error: 'invalid_grant',
                     error_description: 'Invalid refresh token'
                 });
             }
-            // Delete old token
+            // Validate client matches
+            if (existingToken.clientId !== client_id) {
+                console.error('Client ID mismatch for refresh token');
+                return res.status(400).json({
+                    error: 'invalid_grant',
+                    error_description: 'Invalid refresh token'
+                });
+            }
+            // Delete old tokens
             oauth2Tokens.delete(existingToken.accessToken);
+            oauth2TokensByRefresh.delete(existingToken.refreshToken);
             // Generate new tokens
             const accessToken = uuidv4();
             const newRefreshToken = uuidv4();
@@ -322,6 +326,8 @@ router.post('/token', (req, res) => {
                 createdAt: new Date()
             };
             oauth2Tokens.set(accessToken, newToken);
+            oauth2TokensByRefresh.set(newRefreshToken, newToken);
+            console.log('Refresh token success, new tokens generated');
             res.json({
                 access_token: accessToken,
                 refresh_token: newRefreshToken,

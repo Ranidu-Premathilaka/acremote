@@ -3,6 +3,7 @@ export const users = new Map();
 export const usersByEmail = new Map();
 export const oauth2Clients = new Map();
 export const oauth2Tokens = new Map();
+export const oauth2TokensByRefresh = new Map();
 export const authorizationCodes = new Map();
 // Initialize with a sample OAuth2 client for Google Home
 oauth2Clients.set('google-home-client', {

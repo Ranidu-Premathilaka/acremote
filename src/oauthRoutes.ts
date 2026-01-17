@@ -4,6 +4,7 @@ import { getUserFromToken } from './auth.js'
 import {
   oauth2Clients,
   oauth2Tokens,
+  oauth2TokensByRefresh,
   authorizationCodes,
   AuthorizationCode,
   OAuth2Token
@@ -302,6 +303,7 @@ router.post('/token', (req: Request, res: Response) => {
       }
 
       oauth2Tokens.set(accessToken, token)
+      oauth2TokensByRefresh.set(refreshToken, token)
 
       res.json({
         access_token: accessToken,
@@ -328,24 +330,28 @@ router.post('/token', (req: Request, res: Response) => {
         })
       }
 
-      // Find token by refresh token
-      let existingToken: OAuth2Token | undefined
-      for (const token of oauth2Tokens.values()) {
-        if (token.refreshToken === refresh_token && token.clientId === client_id) {
-          existingToken = token
-          break
-        }
-      }
+      const existingToken = oauth2TokensByRefresh.get(refresh_token)
 
       if (!existingToken) {
+        console.error('Refresh token not found:', refresh_token)
         return res.status(400).json({
           error: 'invalid_grant',
           error_description: 'Invalid refresh token'
         })
       }
 
-      // Delete old token
+      // Validate client matches
+      if (existingToken.clientId !== client_id) {
+        console.error('Client ID mismatch for refresh token')
+        return res.status(400).json({
+          error: 'invalid_grant',
+          error_description: 'Invalid refresh token'
+        })
+      }
+
+      // Delete old tokens
       oauth2Tokens.delete(existingToken.accessToken)
+      oauth2TokensByRefresh.delete(existingToken.refreshToken)
 
       // Generate new tokens
       const accessToken = uuidv4()
@@ -361,6 +367,9 @@ router.post('/token', (req: Request, res: Response) => {
       }
 
       oauth2Tokens.set(accessToken, newToken)
+      oauth2TokensByRefresh.set(newRefreshToken, newToken)
+
+      console.log('Refresh token success, new tokens generated')
 
       res.json({
         access_token: accessToken,
