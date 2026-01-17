@@ -1,11 +1,17 @@
 import express from 'express'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import authRoutes from './authRoutes.js'
+import oauthRoutes from './oauthRoutes.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
+
+// Middleware
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 // Home route - HTML
 app.get('/', (req, res) => {
@@ -48,5 +54,29 @@ app.get('/api-data', (req, res) => {
 app.get('/healthz', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// Mount authentication routes
+app.use('/api/auth', authRoutes)
+
+// Mount OAuth2 routes
+app.use('/oauth', oauthRoutes)
+
+// Serve static files
+app.use(express.static(path.join(__dirname, '..', 'public')))
+
+// Start server if not imported as module
+const PORT = process.env.PORT || 3000
+if (import.meta.url === `file://${process.argv[1]}`) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+    console.log('\n🔐 Authentication endpoints:')
+    console.log(`  POST http://localhost:${PORT}/api/auth/signup`)
+    console.log(`  POST http://localhost:${PORT}/api/auth/signin`)
+    console.log(`  GET  http://localhost:${PORT}/api/auth/me`)
+    console.log('\n🔑 OAuth2 endpoints (for Google Home):')
+    console.log(`  GET  http://localhost:${PORT}/oauth/authorize`)
+    console.log(`  POST http://localhost:${PORT}/oauth/token`)
+  })
+}
 
 export default app
