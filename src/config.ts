@@ -22,6 +22,10 @@ export const AC_DEVICE = {
   attributes: {
     availableThermostatModes: ['off', 'fan-only', 'cool', 'dry'],
     thermostatTemperatureUnit: 'C',
+    thermostatTemperatureRange: {
+      minThresholdCelsius: 18,
+      maxThresholdCelsius: 30
+    },
     availableFanSpeeds: {
       speeds: [
         { speed_name: 'low_key', speed_values: [{ speed_synonym: ['low', 'slow'], lang: 'en' }] },
