@@ -30,7 +30,8 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  */
 export async function createUser(email: string, password: string): Promise<User> {
   // Check if user already exists
-  if (usersByEmail.has(email)) {
+  const existingUser = await usersByEmail.get(email)
+  if (existingUser) {
     throw new Error('User already exists')
   }
 
@@ -46,8 +47,8 @@ export async function createUser(email: string, password: string): Promise<User>
   }
 
   // Store user
-  users.set(user.id, user)
-  usersByEmail.set(user.email, user)
+  await users.set(user.id, user)
+  await usersByEmail.set(user.email, user)
 
   return user
 }
@@ -56,7 +57,7 @@ export async function createUser(email: string, password: string): Promise<User>
  * Authenticate a user
  */
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
-  const user = usersByEmail.get(email)
+  const user = await usersByEmail.get(email)
   if (!user) {
     return null
   }
@@ -95,11 +96,11 @@ export function verifyJWT(token: string): JWTPayload | null {
 /**
  * Get user from JWT token
  */
-export function getUserFromToken(token: string): User | null {
+export async function getUserFromToken(token: string): Promise<User | null> {
   const payload = verifyJWT(token)
   if (!payload) {
     return null
   }
 
-  return users.get(payload.userId) || null
+  return (await users.get(payload.userId)) || null
 }

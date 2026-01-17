@@ -21,7 +21,8 @@ export async function verifyPassword(password, hash) {
  */
 export async function createUser(email, password) {
     // Check if user already exists
-    if (usersByEmail.has(email)) {
+    const existingUser = await usersByEmail.get(email);
+    if (existingUser) {
         throw new Error('User already exists');
     }
     // Hash password
@@ -34,15 +35,15 @@ export async function createUser(email, password) {
         createdAt: new Date()
     };
     // Store user
-    users.set(user.id, user);
-    usersByEmail.set(user.email, user);
+    await users.set(user.id, user);
+    await usersByEmail.set(user.email, user);
     return user;
 }
 /**
  * Authenticate a user
  */
 export async function authenticateUser(email, password) {
-    const user = usersByEmail.get(email);
+    const user = await usersByEmail.get(email);
     if (!user) {
         return null;
     }
@@ -76,10 +77,10 @@ export function verifyJWT(token) {
 /**
  * Get user from JWT token
  */
-export function getUserFromToken(token) {
+export async function getUserFromToken(token) {
     const payload = verifyJWT(token);
     if (!payload) {
         return null;
     }
-    return users.get(payload.userId) || null;
+    return (await users.get(payload.userId)) || null;
 }

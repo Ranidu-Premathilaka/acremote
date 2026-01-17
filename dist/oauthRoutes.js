@@ -8,7 +8,7 @@ const router = Router();
  * OAuth2 authorization endpoint
  * This is where Google Home will redirect users to authenticate
  */
-router.get('/authorize', (req, res) => {
+router.get('/authorize', async (req, res) => {
     const { client_id, redirect_uri, state, response_type } = req.query;
     // Validate required parameters
     if (!client_id || !redirect_uri || !state || response_type !== 'code') {
@@ -18,7 +18,7 @@ router.get('/authorize', (req, res) => {
         });
     }
     // Validate client
-    const client = oauth2Clients.get(client_id);
+    const client = await oauth2Clients.get(client_id);
     if (!client) {
         console.error('Invalid client_id:', client_id);
         return res.status(401).json({
@@ -166,7 +166,7 @@ router.get('/authorize', (req, res) => {
  * POST /oauth/grant
  * Grant authorization code after user signs in
  */
-router.post('/grant', (req, res) => {
+router.post('/grant', async (req, res) => {
     try {
         const { client_id, redirect_uri, state } = req.body;
         // Get user from token
@@ -175,12 +175,12 @@ router.post('/grant', (req, res) => {
             return res.status(401).json({ error: 'No token provided' });
         }
         const token = authHeader.substring(7);
-        const user = getUserFromToken(token);
+        const user = await getUserFromToken(token);
         if (!user) {
             return res.status(401).json({ error: 'Invalid token' });
         }
         // Validate client
-        const client = oauth2Clients.get(client_id);
+        const client = await oauth2Clients.get(client_id);
         if (!client) {
             return res.status(401).json({ error: 'Invalid client_id' });
         }
@@ -198,7 +198,7 @@ router.post('/grant', (req, res) => {
             expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
             createdAt: new Date()
         };
-        authorizationCodes.set(code, authCode);
+        await authorizationCodes.set(code, authCode);
         // Build redirect URL
         const redirectUrl = new URL(redirect_uri);
         redirectUrl.searchParams.set('code', code);
@@ -214,7 +214,7 @@ router.post('/grant', (req, res) => {
  * POST /oauth/token
  * Exchange authorization code for access token
  */
-router.post('/token', (req, res) => {
+router.post('/token', async (req, res) => {
     try {
         const { grant_type, code, client_id, client_secret, redirect_uri } = req.body;
         // Validate grant_type
@@ -227,7 +227,7 @@ router.post('/token', (req, res) => {
                 });
             }
             // Validate client
-            const client = oauth2Clients.get(client_id);
+            const client = await oauth2Clients.get(client_id);
             if (!client || client.clientSecret !== client_secret) {
                 return res.status(401).json({
                     error: 'invalid_client',
@@ -235,7 +235,7 @@ router.post('/token', (req, res) => {
                 });
             }
             // Get authorization code
-            const authCode = authorizationCodes.get(code);
+            const authCode = await authorizationCodes.get(code);
             if (!authCode) {
                 return res.status(400).json({
                     error: 'invalid_grant',
@@ -244,7 +244,7 @@ router.post('/token', (req, res) => {
             }
             // Check if code is expired
             if (authCode.expiresAt < new Date()) {
-                authorizationCodes.delete(code);
+                await authorizationCodes.delete(code);
                 return res.status(400).json({
                     error: 'invalid_grant',
                     error_description: 'Authorization code expired'
@@ -258,7 +258,7 @@ router.post('/token', (req, res) => {
                 });
             }
             // Delete the used code
-            authorizationCodes.delete(code);
+            await authorizationCodes.delete(code);
             // Generate tokens
             const accessToken = uuidv4();
             const refreshToken = uuidv4();
@@ -270,8 +270,8 @@ router.post('/token', (req, res) => {
                 expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
                 createdAt: new Date()
             };
-            oauth2Tokens.set(accessToken, token);
-            oauth2TokensByRefresh.set(refreshToken, token);
+            await oauth2Tokens.set(accessToken, token);
+            await oauth2TokensByRefresh.set(refreshToken, token);
             res.json({
                 access_token: accessToken,
                 refresh_token: refreshToken,
@@ -288,14 +288,14 @@ router.post('/token', (req, res) => {
                 });
             }
             // Validate client
-            const client = oauth2Clients.get(client_id);
+            const client = await oauth2Clients.get(client_id);
             if (!client || client.clientSecret !== client_secret) {
                 return res.status(401).json({
                     error: 'invalid_client',
                     error_description: 'Invalid client credentials'
                 });
             }
-            const existingToken = oauth2TokensByRefresh.get(refresh_token);
+            const existingToken = await oauth2TokensByRefresh.get(refresh_token);
             if (!existingToken) {
                 console.error('Refresh token not found:', refresh_token);
                 return res.status(400).json({
@@ -312,8 +312,8 @@ router.post('/token', (req, res) => {
                 });
             }
             // Delete old tokens
-            oauth2Tokens.delete(existingToken.accessToken);
-            oauth2TokensByRefresh.delete(existingToken.refreshToken);
+            await oauth2Tokens.delete(existingToken.accessToken);
+            await oauth2TokensByRefresh.delete(existingToken.refreshToken);
             // Generate new tokens
             const accessToken = uuidv4();
             const newRefreshToken = uuidv4();
@@ -325,8 +325,8 @@ router.post('/token', (req, res) => {
                 expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
                 createdAt: new Date()
             };
-            oauth2Tokens.set(accessToken, newToken);
-            oauth2TokensByRefresh.set(newRefreshToken, newToken);
+            await oauth2Tokens.set(accessToken, newToken);
+            await oauth2TokensByRefresh.set(newRefreshToken, newToken);
             console.log('Refresh token success, new tokens generated');
             res.json({
                 access_token: accessToken,

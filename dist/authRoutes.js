@@ -7,7 +7,8 @@ const router = Router();
  * Initialize admin user on first run
  */
 async function initializeAdminUser() {
-    if (!usersByEmail.has(ADMIN_CONFIG.email)) {
+    const existingUser = await usersByEmail.get(ADMIN_CONFIG.email);
+    if (!existingUser) {
         try {
             await createUser(ADMIN_CONFIG.email, ADMIN_CONFIG.password);
             console.log(`✅ Admin user created: ${ADMIN_CONFIG.email}`);
@@ -135,14 +136,14 @@ router.post('/signin', async (req, res) => {
  * GET /api/auth/me
  * Get current user info from token
  */
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ error: 'No token provided' });
         }
         const token = authHeader.substring(7);
-        const user = getUserFromToken(token);
+        const user = await getUserFromToken(token);
         if (!user) {
             return res.status(401).json({ error: 'Invalid token' });
         }

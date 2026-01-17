@@ -7,18 +7,18 @@ const router = Router();
 /**
  * Middleware to verify OAuth2 access token
  */
-function verifyAccessToken(req, res, next) {
+async function verifyAccessToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'unauthorized', error_description: 'No access token provided' });
     }
     const accessToken = authHeader.substring(7);
-    const token = oauth2Tokens.get(accessToken);
+    const token = await oauth2Tokens.get(accessToken);
     if (!token) {
         return res.status(401).json({ error: 'unauthorized', error_description: 'Invalid access token' });
     }
     if (token.expiresAt < new Date()) {
-        oauth2Tokens.delete(accessToken);
+        await oauth2Tokens.delete(accessToken);
         return res.status(401).json({ error: 'unauthorized', error_description: 'Access token expired' });
     }
     // Attach user info to request
