@@ -26,7 +26,7 @@ export interface ACState {
 export let currentACState: ACState = {
   online: true,
   on: false,
-  thermostatMode: 'off',
+  thermostatMode: 'cool',
   thermostatTemperatureSetpoint: 22,
   currentFanSpeedSetting: 'medium_key',
   currentToggleSettings: {

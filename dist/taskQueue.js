@@ -3,7 +3,7 @@ export const taskQueue = [];
 export let currentACState = {
     online: true,
     on: false,
-    thermostatMode: 'off',
+    thermostatMode: 'cool',
     thermostatTemperatureSetpoint: 22,
     currentFanSpeedSetting: 'medium_key',
     currentToggleSettings: {

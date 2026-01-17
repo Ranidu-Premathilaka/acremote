@@ -185,9 +185,6 @@ function handleExecute(req: Request, res: Response, requestId: string, input: an
           switch (cmdName) {
             case 'action.devices.commands.OnOff':
               newState.on = params.on
-              if (!params.on) {
-                newState.thermostatMode = 'off'
-              }
               break
 
             case 'action.devices.commands.ThermostatTemperatureSetpoint':
@@ -196,11 +193,8 @@ function handleExecute(req: Request, res: Response, requestId: string, input: an
 
             case 'action.devices.commands.ThermostatSetMode':
               newState.thermostatMode = params.thermostatMode
-              if (params.thermostatMode !== 'off') {
-                newState.on = true
-              } else {
-                newState.on = false
-              }
+              // Setting any thermostat mode turns the AC on
+              newState.on = true
               break
 
             case 'action.devices.commands.SetFanSpeed':
