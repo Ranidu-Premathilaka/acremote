@@ -14,49 +14,12 @@ router.get('/', (req, res) => {
     }
     // Get all unprocessed tasks
     const unprocessedTasks = taskQueue.filter(task => !task.processed);
-    // Parse tasks into simplified commands
-    const commands = unprocessedTasks.map(task => {
-        const parsed = {
-            id: task.id,
-            timestamp: task.timestamp,
-            deviceId: task.deviceId,
-            command: task.command.replace('action.devices.commands.', '')
-        };
-        // Parse params into human-readable format
-        switch (task.command) {
-            case 'action.devices.commands.OnOff':
-                parsed.action = task.params.on ? 'turn_on' : 'turn_off';
-                break;
-            case 'action.devices.commands.ThermostatTemperatureSetpoint':
-                parsed.action = 'set_temperature';
-                parsed.temperature = task.params.thermostatTemperatureSetpoint;
-                parsed.unit = 'C';
-                break;
-            case 'action.devices.commands.ThermostatSetMode':
-                parsed.action = 'set_mode';
-                parsed.mode = task.params.thermostatMode;
-                break;
-            case 'action.devices.commands.SetFanSpeed':
-                parsed.action = 'set_fan_speed';
-                parsed.fanSpeed = task.params.fanSpeed.replace('_key', '');
-                break;
-            case 'action.devices.commands.SetToggles':
-                parsed.action = 'set_toggles';
-                parsed.toggles = task.params.updateToggleSettings;
-                break;
-            default:
-                parsed.action = 'unknown';
-                parsed.params = task.params;
-        }
-        return parsed;
-    });
     // Mark tasks as processed
     unprocessedTasks.forEach(task => {
         task.processed = true;
     });
     res.json({
-        count: commands.length,
-        commands,
+        count: unprocessedTasks.length,
         currentState: currentACState
     });
 });
