@@ -20,7 +20,7 @@ export const AC_DEVICE = {
     'action.devices.traits.Toggles'
   ],
   attributes: {
-    availableThermostatModes: ['fan-only', 'cool', 'dry'],
+    availableThermostatModes: ['off', 'fan-only', 'cool', 'dry'],
     thermostatTemperatureUnit: 'C',
     availableFanSpeeds: {
       speeds: [

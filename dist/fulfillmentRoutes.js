@@ -173,8 +173,14 @@ function handleExecute(req, res, requestId, input) {
                             break;
                         case 'action.devices.commands.ThermostatSetMode':
                             newState.thermostatMode = params.thermostatMode;
-                            // Setting any thermostat mode turns the AC on
-                            newState.on = true;
+                            // Setting off mode turns the AC off
+                            if (params.thermostatMode === 'off') {
+                                newState.on = false;
+                            }
+                            else {
+                                // Setting any other thermostat mode turns the AC on
+                                newState.on = true;
+                            }
                             break;
                         case 'action.devices.commands.SetFanSpeed':
                             newState.currentFanSpeedSetting = params.fanSpeed;
