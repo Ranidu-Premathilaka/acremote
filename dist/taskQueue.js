@@ -5,7 +5,6 @@ export let currentACState = {
     on: false,
     thermostatMode: 'off',
     thermostatTemperatureSetpoint: 22,
-    thermostatTemperatureAmbient: 25,
     currentFanSpeedSetting: 'medium_key',
     currentToggleSettings: {
         swing: false
