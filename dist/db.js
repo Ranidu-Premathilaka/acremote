@@ -8,5 +8,5 @@ export const authorizationCodes = new Map();
 oauth2Clients.set('google-home-client', {
     clientId: 'google-home-client',
     clientSecret: 'your-client-secret-change-this', // Change this in production!
-    redirectUris: ['https://oauth-redirect.googleusercontent.com/r/YOUR_PROJECT_ID']
+    redirectUris: ['https://oauth-redirect.googleusercontent.com/r/acremote-0b610']
 });

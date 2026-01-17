@@ -20,16 +20,20 @@ router.get('/authorize', (req, res) => {
     // Validate client
     const client = oauth2Clients.get(client_id);
     if (!client) {
+        console.error('Invalid client_id:', client_id);
         return res.status(401).json({
             error: 'invalid_client',
             error_description: 'Invalid client_id'
         });
     }
     // Validate redirect_uri
+    console.log('Checking redirect_uri:', redirect_uri);
+    console.log('Allowed redirectUris:', client.redirectUris);
     if (!client.redirectUris.includes(redirect_uri)) {
+        console.error('Redirect URI not in allowed list');
         return res.status(400).json({
             error: 'invalid_request',
-            error_description: 'Invalid redirect_uri'
+            error_description: `Invalid redirect_uri. Got: ${redirect_uri}, Expected one of: ${client.redirectUris.join(', ')}`
         });
     }
     // Show authorization page
