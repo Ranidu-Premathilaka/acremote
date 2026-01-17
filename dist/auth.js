@@ -1,0 +1,85 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { users, usersByEmail } from './db.js';
+// JWT secret - in production, use environment variable!
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+/**
+ * Hash a password using bcrypt
+ */
+export async function hashPassword(password) {
+    return bcrypt.hash(password, 10);
+}
+/**
+ * Verify a password against a hash
+ */
+export async function verifyPassword(password, hash) {
+    return bcrypt.compare(password, hash);
+}
+/**
+ * Create a user account
+ */
+export async function createUser(email, password) {
+    // Check if user already exists
+    if (usersByEmail.has(email)) {
+        throw new Error('User already exists');
+    }
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+    // Create user
+    const user = {
+        id: uuidv4(),
+        email,
+        password: hashedPassword,
+        createdAt: new Date()
+    };
+    // Store user
+    users.set(user.id, user);
+    usersByEmail.set(user.email, user);
+    return user;
+}
+/**
+ * Authenticate a user
+ */
+export async function authenticateUser(email, password) {
+    const user = usersByEmail.get(email);
+    if (!user) {
+        return null;
+    }
+    const isValid = await verifyPassword(password, user.password);
+    if (!isValid) {
+        return null;
+    }
+    return user;
+}
+/**
+ * Generate JWT token for a user
+ */
+export function generateJWT(user) {
+    const payload = {
+        userId: user.id,
+        email: user.email
+    };
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+}
+/**
+ * Verify JWT token
+ */
+export function verifyJWT(token) {
+    try {
+        return jwt.verify(token, JWT_SECRET);
+    }
+    catch (error) {
+        return null;
+    }
+}
+/**
+ * Get user from JWT token
+ */
+export function getUserFromToken(token) {
+    const payload = verifyJWT(token);
+    if (!payload) {
+        return null;
+    }
+    return users.get(payload.userId) || null;
+}
