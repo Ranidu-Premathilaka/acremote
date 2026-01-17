@@ -29,7 +29,7 @@ app.use((req, res, next) => {
     res.send = function (body) {
         const duration = Date.now() - start;
         console.log(`📤 [${new Date().toISOString()}] Response ${res.statusCode} (${duration}ms)`);
-        console.log('Response Body:', typeof body === 'string' ? body.substring(0, 500) : body);
+        console.log('Response Body:', typeof body === 'string' ? body : JSON.stringify(body, null, 2));
         return originalSend.call(this, body);
     };
     res.json = function (body) {
