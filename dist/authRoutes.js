@@ -1,41 +1,34 @@
 import { Router } from 'express';
 import { createUser, authenticateUser, generateJWT, getUserFromToken } from './auth.js';
+import { ADMIN_CONFIG } from './config.js';
+import { usersByEmail } from './db.js';
 const router = Router();
 /**
+ * Initialize admin user on first run
+ */
+async function initializeAdminUser() {
+    if (!usersByEmail.has(ADMIN_CONFIG.email)) {
+        try {
+            await createUser(ADMIN_CONFIG.email, ADMIN_CONFIG.password);
+            console.log(`✅ Admin user created: ${ADMIN_CONFIG.email}`);
+            console.log('⚠️  Change the default password via ADMIN_PASSWORD env var!');
+        }
+        catch (error) {
+            console.error('Failed to create admin user:', error);
+        }
+    }
+}
+// Initialize on module load
+initializeAdminUser();
+/**
  * POST /api/auth/signup
- * Create a new user account
+ * Disabled - single admin user only
  */
 router.post('/signup', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        // Validation
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
-        }
-        // Create user
-        const user = await createUser(email, password);
-        // Generate JWT token
-        const token = generateJWT(user);
-        res.status(201).json({
-            message: 'User created successfully',
-            token,
-            user: {
-                id: user.id,
-                email: user.email,
-                createdAt: user.createdAt
-            }
-        });
-    }
-    catch (error) {
-        if (error instanceof Error && error.message === 'User already exists') {
-            return res.status(409).json({ error: 'User already exists' });
-        }
-        console.error('Signup error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+    res.status(403).json({
+        error: 'Signup is disabled. This system supports a single admin user only.',
+        adminEmail: ADMIN_CONFIG.email
+    });
 });
 /**
  * POST /api/auth/signin

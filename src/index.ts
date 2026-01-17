@@ -3,6 +3,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import authRoutes from './authRoutes.js'
 import oauthRoutes from './oauthRoutes.js'
+import fulfillmentRoutes from './fulfillmentRoutes.js'
+import taskRoutes from './taskRoutes.js'
+import { ADMIN_CONFIG } from './config.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -20,19 +23,98 @@ app.get('/', (req, res) => {
     <html>
       <head>
         <meta charset="utf-8"/>
-        <title>Express on Vercel</title>
+        <title>AC Remote Control</title>
         <link rel="stylesheet" href="/style.css" />
+        <style>
+          body { font-family: system-ui; max-width: 800px; margin: 50px auto; padding: 20px; }
+          .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+          h2 { color: #0066cc; }
+          code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+          .endpoint { margin: 10px 0; padding: 10px; background: #f9f9f9; border-left: 3px solid #0066cc; }
+          .method { font-weight: bold; color: #0066cc; }
+        </style>
       </head>
       <body>
-        <nav>
-          <a href="/">Home</a>
-          <a href="/about">About</a>
-          <a href="/api-data">API Data</a>
-          <a href="/healthz">Health</a>
-        </nav>
-        <h1>Welcome to Express on Vercel 🚀</h1>
-        <p>This is a minimal example without a database or forms.</p>
-        <img src="/logo.png" alt="Logo" width="120" />
+        <h1>🌡️ AC Remote Control System</h1>
+        <p>Single-user authentication with Google Home integration</p>
+
+        <div class="section">
+          <h2>👤 Admin Account</h2>
+          <p>Email: <code>${ADMIN_CONFIG.email}</code></p>
+          <p>Configure via environment variables:</p>
+          <ul>
+            <li><code>ADMIN_EMAIL</code> - Admin email address</li>
+            <li><code>ADMIN_PASSWORD</code> - Admin password</li>
+            <li><code>TASK_SECRET_KEY</code> - Secret key for task endpoint</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <h2>🔐 Authentication</h2>
+          <div class="endpoint">
+            <span class="method">POST</span> <code>/api/auth/signin</code><br>
+            Sign in to get JWT token
+          </div>
+          <div class="endpoint">
+            <span class="method">GET</span> <code>/api/auth/me</code><br>
+            Get current user info (requires Bearer token)
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>🔑 OAuth2 (Google Home)</h2>
+          <div class="endpoint">
+            <span class="method">GET</span> <code>/oauth/authorize</code><br>
+            Authorization endpoint for Google Home
+          </div>
+          <div class="endpoint">
+            <span class="method">POST</span> <code>/oauth/token</code><br>
+            Token exchange endpoint
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>🏠 Google Home Fulfillment</h2>
+          <div class="endpoint">
+            <span class="method">POST</span> <code>/fulfillment</code><br>
+            Handle SYNC, QUERY, and EXECUTE intents (requires OAuth token)
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>📋 Task Queue</h2>
+          <div class="endpoint">
+            <span class="method">GET</span> <code>/tasks</code><br>
+            Retrieve pending tasks (requires X-Secret-Key header)
+          </div>
+          <div class="endpoint">
+            <span class="method">POST</span> <code>/tasks/state</code><br>
+            Update AC state (requires X-Secret-Key header)
+          </div>
+          <div class="endpoint">
+            <span class="method">GET</span> <code>/tasks/history</code><br>
+            View task history (requires X-Secret-Key header)
+          </div>
+          <div class="endpoint">
+            <span class="method">DELETE</span> <code>/tasks</code><br>
+            Clear processed tasks (requires X-Secret-Key header)
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>⚙️ Setup</h2>
+          <p><strong>1. Configure Google Actions Console:</strong></p>
+          <ul>
+            <li>Authorization URL: <code>https://YOUR_DOMAIN/oauth/authorize</code></li>
+            <li>Token URL: <code>https://YOUR_DOMAIN/oauth/token</code></li>
+            <li>Fulfillment URL: <code>https://YOUR_DOMAIN/fulfillment</code></li>
+            <li>Client ID: <code>google-home-client</code></li>
+          </ul>
+          <p><strong>2. Test AC control:</strong></p>
+          <p>"Hey Google, turn on the air conditioner"</p>
+          <p>"Hey Google, set AC to 22 degrees"</p>
+          <p>"Hey Google, set AC fan speed to high"</p>
+        </div>
       </body>
     </html>
   `)
@@ -61,6 +143,12 @@ app.use('/api/auth', authRoutes)
 // Mount OAuth2 routes
 app.use('/oauth', oauthRoutes)
 
+// Mount Google Home fulfillment
+app.use('/fulfillment', fulfillmentRoutes)
+
+// Mount task queue routes
+app.use('/tasks', taskRoutes)
+
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'public')))
 
@@ -68,14 +156,15 @@ app.use(express.static(path.join(__dirname, '..', 'public')))
 const PORT = process.env.PORT || 3000
 if (import.meta.url === `file://${process.argv[1]}`) {
   app.listen(PORT, () => {
+    console.log(`\n🌡️  AC Remote Control Server`)
     console.log(`Server running on http://localhost:${PORT}`)
-    console.log('\n🔐 Authentication endpoints:')
-    console.log(`  POST http://localhost:${PORT}/api/auth/signup`)
+    console.log(`\n👤 Admin: ${ADMIN_CONFIG.email}`)
+    console.log(`🔑 Task Secret: ${ADMIN_CONFIG.taskSecretKey}`)
+    console.log('\n📡 Endpoints:')
     console.log(`  POST http://localhost:${PORT}/api/auth/signin`)
-    console.log(`  GET  http://localhost:${PORT}/api/auth/me`)
-    console.log('\n🔑 OAuth2 endpoints (for Google Home):')
-    console.log(`  GET  http://localhost:${PORT}/oauth/authorize`)
-    console.log(`  POST http://localhost:${PORT}/oauth/token`)
+    console.log(`  POST http://localhost:${PORT}/oauth/authorize`)
+    console.log(`  POST http://localhost:${PORT}/fulfillment`)
+    console.log(`  GET  http://localhost:${PORT}/tasks`)
   })
 }
 
