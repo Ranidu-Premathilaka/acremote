@@ -40,6 +40,20 @@ export const AC_DEVICE = {
                         name_synonym: ['swing', 'oscillate', 'oscillation'],
                         lang: 'en'
                     }]
+            },
+            {
+                name: 'high_cool',
+                name_values: [{
+                        name_synonym: ['high cool', 'turbo', 'turbo cool', 'boost'],
+                        lang: 'en'
+                    }]
+            },
+            {
+                name: 'light',
+                name_values: [{
+                        name_synonym: ['light', 'display light', 'panel light'],
+                        lang: 'en'
+                    }]
             }
         ]
     }

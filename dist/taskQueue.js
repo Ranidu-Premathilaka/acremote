@@ -7,7 +7,9 @@ export let currentACState = {
     thermostatTemperatureSetpoint: 22,
     currentFanSpeedSetting: 'medium_key',
     currentToggleSettings: {
-        swing: false
+        swing: false,
+        high_cool: false,
+        light: true
     }
 };
 /**
