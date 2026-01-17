@@ -14,18 +14,37 @@ export const AC_DEVICE = {
     traits: [
         'action.devices.traits.OnOff',
         'action.devices.traits.TemperatureSetting',
-        'action.devices.traits.FanSpeed'
+        'action.devices.traits.FanSpeed',
+        'action.devices.traits.Toggles'
     ],
     attributes: {
-        availableThermostatModes: ['off', 'cool', 'heat', 'auto', 'dry', 'fan-only'],
+        availableThermostatModes: ['off', 'fan-only', 'cool', 'dry'],
         thermostatTemperatureUnit: 'C',
         availableFanSpeeds: {
             speeds: [
                 { speed_name: 'low_key', speed_values: [{ speed_synonym: ['low', 'slow'], lang: 'en' }] },
                 { speed_name: 'medium_key', speed_values: [{ speed_synonym: ['medium', 'mid'], lang: 'en' }] },
-                { speed_name: 'high_key', speed_values: [{ speed_synonym: ['high', 'fast'], lang: 'en' }] }
+                { speed_name: 'high_key', speed_values: [{ speed_synonym: ['high', 'fast'], lang: 'en' }] },
+                { speed_name: 'auto_key', speed_values: [{ speed_synonym: ['auto', 'automatic'], lang: 'en' }] }
             ],
             ordered: true
-        }
+        },
+        availableToggles: [
+            {
+                name: 'swing',
+                name_values: [{
+                        name_synonym: ['swing', 'oscillate', 'oscillation'],
+                        lang: 'en'
+                    }]
+            }
+        ]
     }
+};
+// Mode mappings for your AC
+export const AC_MODES = {
+    'fan-only': 'fan only',
+    'cool': 'normal',
+    'dry': 'monsoon',
+    // Note: 'high cool' doesn't fit standard thermostat modes
+    // It could be represented as cool mode + high fan speed
 };

@@ -40,6 +40,10 @@ router.get('/', (req, res) => {
                 parsed.action = 'set_fan_speed';
                 parsed.fanSpeed = task.params.fanSpeed.replace('_key', '');
                 break;
+            case 'action.devices.commands.SetToggles':
+                parsed.action = 'set_toggles';
+                parsed.toggles = task.params.updateToggleSettings;
+                break;
             default:
                 parsed.action = 'unknown';
                 parsed.params = task.params;

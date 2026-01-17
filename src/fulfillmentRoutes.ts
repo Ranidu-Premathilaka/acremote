@@ -207,6 +207,15 @@ function handleExecute(req: Request, res: Response, requestId: string, input: an
               newState.currentFanSpeedSetting = params.fanSpeed
               break
 
+            case 'action.devices.commands.SetToggles':
+              if (params.updateToggleSettings) {
+                newState.currentToggleSettings = {
+                  ...newState.currentToggleSettings,
+                  ...params.updateToggleSettings
+                }
+              }
+              break
+
             default:
               success = false
               console.warn('Unknown command:', cmdName)
