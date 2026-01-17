@@ -94,7 +94,7 @@ app.get('/', requireAuth, (req, res) => {
 
         <div class="section">
           <h2>👤 Admin Account</h2>
-          <p>Email: <code>${ADMIN_CONFIG.email}</code></p>
+          <p>Authenticated as admin</p>
           <p>Configure via environment variables:</p>
           <ul>
             <li><code>ADMIN_EMAIL</code> - Admin email address</li>
