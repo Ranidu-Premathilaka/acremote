@@ -1,0 +1,308 @@
+#define TIMING_OFFSET 1.575
+
+#define HIGH 1
+#define LOW 0
+
+#define KEYCODE_START 4
+#define KEYCODE_END 31
+#define DELAY_AFTER_INJECT 4
+
+#define DEFAULT_TEMP  9 //26
+#define DEFAULT_FAN_SPEED  0 //HIGH
+
+//#define INJECT_PIN D5
+
+#define STARTBIT_ARRAY {2,3,0}
+#define STARTBIT_LENGTH 3
+
+#define TEMP_OFFSET 3   
+#define TEMPBIT_START 12
+
+
+#define HIGH_SPEED_BITS 0b00000000000000000000010000000000
+#define MID_SPEED_BITS  0b00000000000000000000001000000000
+#define LOW_SPEED_BITS  0b00000000000000000000000000000000
+#define AUTO_SPEED_BITS 0b00000000000000000000010100000000
+
+#define HIGH_OFFSET 15
+#define MID_OFFSET  13
+#define LOW_OFFSET  11
+#define AUTO_OFFSET 0
+
+#define HIGH_SPEED 0
+#define MID_SPEED  1
+#define LOW_SPEED  2
+#define AUTO_SPEED 3
+
+#define POWEROFF_CODE       0b10001000110000000000010100010000 //OFF
+
+#define TEMP_CHANGE         0b10001000000010000000000000000000 
+#define POWERON_INVERT_BIT  0b00000000000010000000000010000000
+
+#define HIGHCOOL_CODE       0b10001000000100000000110111100000
+#define LIGHT_CODE          0b10001000110000000000101001100000
+
+
+#define SWING_CODE          0b10001000000100110001010000000000 //swing without toggle 
+#define SWING_ON            0b01001
+#define SWING_OFF           0b11010
+
+#define ENRG_SAVING_CODE    0b10001000000100000000010000000000 //energy saving without toggles
+#define ENRG_ON             0b00101
+#define ENRG_OFF            0b10110
+
+#define AC_CLEAN_CODE       0b10001000110000000000100000000000 //AC clean without toggles
+#define CLEAN_ON            0b0110111
+#define CLEAN_OFF           0b1001000
+
+#define FANONLY_BIT     0b10001000000010100011000000000000
+#define HIGH_FANONLY    0b0001
+#define MID_FANONLY     0b1111
+#define LOW_FANONLY     0b1101
+#define AUTO_FANONLY    0b0010
+
+#define AI_CODE         0b10001000000010110000010100000000
+//AI offset matches with normal 0-x notation
+
+#define MONSOON_CODE    0b10001000000010010011000000000000
+#define HIGH_MONSOON    0b0000
+#define MID_MONSOON     0b1110
+#define LOW_MONSOON     0b1101
+#define AUTO_MONSOON    0b0001
+
+
+typedef unsigned int uint;
+
+enum ACModes {
+    FANONLY,
+    ENERGY_SAVING,
+    MONSOON,
+    POWER,
+    TEMP,
+    FANSPEED,
+    AIMODE,
+    HIGHCOOL,
+    SWING,
+    ACLEAN,
+    DISPLAYLIGHT
+};
+
+void remote(int,int);
+uint handleFanOnly(int);
+uint handleMonsoon(int);
+uint handleAI(int);
+uint handleFanSpeed(int);
+uint handleTempChange(int);
+uint handleHighCool();
+uint handleLight();
+uint handleToggle(uint,uint,uint,int);
+uint handlePowerMode(int);
+uint getTempBits(int,int);
+uint getFanSpeedBits(int);
+short getBitValue(int,uint);
+void injectStartBits();
+void injectWithDelay(int,int);
+void inject(int,uint);
+void printIntBits(uint);
+
+
+int currentTemp = DEFAULT_TEMP;
+int currentFanSpeed = DEFAULT_FAN_SPEED;
+
+const int steps = 4;
+int timingValues[] = {320,1000,2000,6000};
+
+void remote(int mode, int value) {
+    uint keyCode;
+
+    switch (mode) {
+        case FANONLY:
+            keyCode = handleFanOnly(value);
+            break;
+        case ENERGY_SAVING:
+            keyCode = handleToggle(ENRG_SAVING_CODE,ENRG_ON,ENRG_OFF,value);
+            break;
+        case MONSOON:
+            keyCode = handleMonsoon(value); 
+            break;
+        case POWER:
+            keyCode = handlePowerMode(value);
+            if(value != 13){currentTemp = value;}
+            break;
+        case TEMP:
+            keyCode = handleTempChange(value);
+            currentTemp = value;
+            break;
+        case FANSPEED:
+            keyCode = handleFanSpeed(value);
+            currentFanSpeed = value;
+            break;
+        case AIMODE:
+            keyCode = handleAI(value);
+            break;
+        case HIGHCOOL:
+            keyCode = handleHighCool();
+            break;
+        case SWING:
+            keyCode = handleToggle(SWING_CODE,SWING_ON,SWING_OFF,value);
+            break;
+        case ACLEAN:
+            keyCode = handleToggle(AC_CLEAN_CODE,CLEAN_ON,CLEAN_OFF,value);
+            break;
+        case DISPLAYLIGHT:
+            keyCode = handleLight();
+            break;
+    }
+
+    printIntBits(keyCode);
+
+    inject(KEYCODE_START,keyCode);
+    //digitalWrite(INJECT_PIN,LOW);
+    //delay(DELAY_AFTER_INJECT);
+
+}
+
+uint handleFanOnly(int value){
+    int fanOnlyCode[] = {HIGH_FANONLY,MID_FANONLY,LOW_FANONLY,AUTO_FANONLY};
+
+    return FANONLY_BIT | getFanSpeedBits(value) | (fanOnlyCode[value]<<KEYCODE_START);
+}
+
+uint handleMonsoon(int value){
+    int fanCode[] = {HIGH_MONSOON,MID_MONSOON,LOW_MONSOON,AUTO_MONSOON};
+
+    return MONSOON_CODE | getFanSpeedBits(value) | (fanCode[value]<<KEYCODE_START);
+}
+
+//values start from 0 to 4 which is -2 to +2
+uint handleAI(int value){
+    uint level = (value << TEMPBIT_START) | (value << KEYCODE_START);
+
+    return level | AI_CODE;
+
+}
+
+uint handleFanSpeed(int value){
+  return TEMP_CHANGE | getTempBits(currentTemp,value) | getFanSpeedBits(value);
+}
+
+uint handleTempChange(int value){
+    return TEMP_CHANGE | getTempBits(value,currentFanSpeed) | getFanSpeedBits(currentFanSpeed);
+}
+
+uint handleHighCool(){
+    return HIGHCOOL_CODE;
+}
+
+uint handleLight(){
+    return LIGHT_CODE;
+}
+
+uint handleToggle(uint StartingBits,uint onBits,uint offBits,int value){
+    if (value){
+        return StartingBits | (onBits<<KEYCODE_START);
+    }else{
+        return StartingBits | (offBits<<KEYCODE_START);
+    }
+}
+
+uint handlePowerMode(int value){
+    if(value == 13){
+        return POWEROFF_CODE;
+    }else{
+        return handleTempChange(value) ^ POWERON_INVERT_BIT;
+    }
+}
+
+
+
+uint getTempBits(int tempValue,int fanValue){
+    uint fourBitMask = 0b1111;
+    int tempToEndOffset[] = {HIGH_OFFSET,MID_OFFSET,LOW_OFFSET,AUTO_OFFSET};
+
+    uint tempBits = ( ( tempValue + TEMP_OFFSET ) & fourBitMask ) << TEMPBIT_START;
+    uint endBits = ( ( tempValue + tempToEndOffset[fanValue] ) & fourBitMask) << KEYCODE_START;
+    return tempBits | endBits;
+}
+
+uint getFanSpeedBits(int value){
+    uint values[] = {HIGH_SPEED_BITS,
+                     MID_SPEED_BITS,
+                     LOW_SPEED_BITS,
+                     AUTO_SPEED_BITS
+                     };
+
+    return values[value]; 
+}
+
+
+
+//INJECTION
+short getBitValue(int bitNo,uint keyCode){
+    return (short) ((keyCode >> bitNo) & 1);
+}
+
+void injectStartBits(){
+    int buffer[] = STARTBIT_ARRAY;
+    for (int i = 0; i < STARTBIT_LENGTH; i++){
+        injectWithDelay(!(i%2),timingValues[buffer[i]]);
+    } 
+}
+
+void injectWithDelay(int level,int delay){
+
+}
+
+void inject(int bitNo,uint keyCode){
+
+    short bitValue = getBitValue(bitNo,keyCode);
+
+    if(bitNo == KEYCODE_END){
+        injectStartBits();
+    }else{
+        inject(bitNo+1,keyCode);
+    }
+    injectWithDelay(LOW,timingValues[bitValue]);
+    injectWithDelay(HIGH,timingValues[0]);
+}
+
+
+void printIntBits(uint x){
+  printf("%u",x);
+  printf("\t");
+  for(int i = 31; i>=0; i--){
+    printf("%d",getBitValue(i,x));
+    if(i%4 == 0){
+      printf(" ");
+    }
+  }
+  printf(" \n");
+}
+
+void genTestCase(){
+    int testCases[] = {
+        4,
+        2,
+        4,
+        14,
+        13,
+        4,
+        5,
+        1,
+        2,
+        2,
+        1
+        };
+
+    for (int i = 0; i < 11; i++){
+        for (int j = 0; j < testCases[i]; j++){
+            printf("%d %d\t",i,j);
+            remote(i,j);
+        }    
+    }
+}
+
+int main(){
+    genTestCase();
+}
+
